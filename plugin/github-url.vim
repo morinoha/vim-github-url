@@ -33,15 +33,15 @@ endfunction
 function! s:revision()
   " Check if jj is being used
   if isdirectory(".jj")
-    " Get the git commit hash from jj
-    let git_head_lines = systemlist("jj log -r @ -T 'commit_id.short()' --no-graph")
+    " Get the git HEAD commit hash from jj (what's actually in git/GitHub)
+    let git_head_lines = systemlist("jj log -r 'git_head()' -T 'commit_id.short()' --no-graph 2>/dev/null")
     if len(git_head_lines) > 0 && git_head_lines[0] != ""
       return git_head_lines[0]
     endif
   endif
 
   " Fall back to git
-  let rev_lines = systemlist("git rev-parse HEAD")
+  let rev_lines = systemlist("git rev-parse HEAD 2>/dev/null")
   if len(rev_lines) > 0
     return rev_lines[0]
   endif
