@@ -3,9 +3,41 @@ if exists("g:loaded_github_url") || &cp
 endif
 let g:loaded_github_url = 1
 
+" Find the nearest VCS directory (.jj or .git) in the parent hierarchy
+function! s:findNearestVCS()
+  let current_dir = expand("%:p:h")
+  let max_depth = 20
+  let depth = 0
+
+  while depth < max_depth
+    " Check for .jj first (same priority as .git)
+    if isdirectory(current_dir . "/.jj")
+      return "jj"
+    endif
+
+    " Check for .git
+    if isdirectory(current_dir . "/.git")
+      return "git"
+    endif
+
+    " Move to parent directory
+    let parent_dir = fnamemodify(current_dir, ":h")
+    if parent_dir == current_dir
+      " Reached root directory
+      break
+    endif
+    let current_dir = parent_dir
+    let depth += 1
+  endwhile
+
+  " Default to git if nothing found
+  return "git"
+endfunction
+
 function! s:repoURL()
-  " Check if jj is being used
-  if isdirectory(".jj")
+  let vcs_type = s:findNearestVCS()
+
+  if vcs_type == "jj"
     " JJ is being used - get remote from git config
     let remote = "origin"
   else
@@ -31,8 +63,9 @@ function! s:repoURL()
 endfunction
 
 function! s:revision()
-  " Check if jj is being used
-  if isdirectory(".jj")
+  let vcs_type = s:findNearestVCS()
+
+  if vcs_type == "jj"
     " Get the git HEAD commit hash from jj (what's actually in git/GitHub)
     let git_head_lines = systemlist("jj log -r 'git_head()' -T 'commit_id.short()' --no-graph 2>/dev/null")
     if len(git_head_lines) > 0 && git_head_lines[0] != ""
